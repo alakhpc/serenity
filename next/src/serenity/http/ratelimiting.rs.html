@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/http/ratelimiting.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>ratelimiting.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../serenity/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><form class="search-form"><div class="search-container"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `src/http/ratelimiting.rs`."><meta name="keywords" content="rust, rustlang, rust-lang"><title>ratelimiting.rs - source</title><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Regular.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../FiraSans-Medium.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Regular.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceSerif4-Bold.ttf.woff2"><link rel="preload" as="font" type="font/woff2" crossorigin href="../../../SourceCodePro-Semibold.ttf.woff2"><link rel="stylesheet" href="../../../normalize.css"><link rel="stylesheet" href="../../../rustdoc.css" id="mainThemeStyle"><link rel="stylesheet" href="../../../ayu.css" disabled><link rel="stylesheet" href="../../../dark.css" disabled><link rel="stylesheet" href="../../../light.css" id="themeStyle"><script id="default-settings" ></script><script src="../../../storage.js"></script><script defer src="../../../source-script.js"></script><script defer src="../../../source-files.js"></script><script defer src="../../../main.js"></script><noscript><link rel="stylesheet" href="../../../noscript.css"></noscript><link rel="alternate icon" type="image/png" href="../../../favicon-16x16.png"><link rel="alternate icon" type="image/png" href="../../../favicon-32x32.png"><link rel="icon" type="image/svg+xml" href="../../../favicon.svg"></head><body class="rustdoc source"><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"></nav><main><div class="width-limiter"><nav class="sub"><a class="sub-logo-container" href="../../../serenity/index.html"><img class="rust-logo" src="../../../rust-logo.svg" alt="logo"></a><form class="search-form"><span></span><input class="search-input" name="search" autocomplete="off" spellcheck="false" placeholder="Click or press ‘S’ to search, ‘?’ for more options…" type="search"><div id="help-button" title="help" tabindex="-1"><a href="../../../help.html">?</a></div><div id="settings-menu" tabindex="-1"><a href="../../../settings.html" title="settings"><img width="22" height="22" alt="Change settings" src="../../../wheel.svg"></a></div></form></nav><section id="main-content" class="content"><div class="example-wrap"><pre class="src-line-numbers"><span id="1">1</span>
 <span id="2">2</span>
 <span id="3">3</span>
 <span id="4">4</span>
@@ -521,6 +521,23 @@
 <span id="521">521</span>
 <span id="522">522</span>
 <span id="523">523</span>
+<span id="524">524</span>
+<span id="525">525</span>
+<span id="526">526</span>
+<span id="527">527</span>
+<span id="528">528</span>
+<span id="529">529</span>
+<span id="530">530</span>
+<span id="531">531</span>
+<span id="532">532</span>
+<span id="533">533</span>
+<span id="534">534</span>
+<span id="535">535</span>
+<span id="536">536</span>
+<span id="537">537</span>
+<span id="538">538</span>
+<span id="539">539</span>
+<span id="540">540</span>
 </pre><pre class="rust"><code><span class="doccomment">//! Routes are used for ratelimiting. These are to differentiate between the
 //! different _types_ of routes - such as getting the current user&#39;s channels -
 //! for the most part, with the exception being major parameters.
@@ -618,6 +635,7 @@
     </span>routes: Arc&lt;RwLock&lt;HashMap&lt;Route, Arc&lt;Mutex&lt;Ratelimit&gt;&gt;&gt;&gt;&gt;,
     token: String,
     ratelimit_callback: Box&lt;<span class="kw">dyn </span>Fn(RatelimitInfo) + Send + Sync&gt;,
+    absolute_ratelimits: bool,
 }
 
 <span class="kw">impl </span>fmt::Debug <span class="kw">for </span>Ratelimiter {
@@ -647,6 +665,7 @@
             routes: Arc::default(),
             token,
             ratelimit_callback: Box::new(|<span class="kw">_</span>| {}),
+            absolute_ratelimits: <span class="bool-val">false</span>,
         }
     }
 
@@ -656,6 +675,11 @@
         ratelimit_callback: Box&lt;<span class="kw">dyn </span>Fn(RatelimitInfo) + Send + Sync&gt;,
     ) {
         <span class="self">self</span>.ratelimit_callback = ratelimit_callback;
+    }
+
+    <span class="comment">// Sets whether absolute ratelimits should be used.
+    </span><span class="kw">pub fn </span>set_absolute_ratelimits(<span class="kw-2">&amp;mut </span><span class="self">self</span>, absolute_ratelimits: bool) {
+        <span class="self">self</span>.absolute_ratelimits = absolute_ratelimits;
     }
 
     <span class="doccomment">/// The routes mutex is a HashMap of each [`Route`] and their respective
@@ -773,7 +797,16 @@
                     </span>},
                 )
             } <span class="kw">else </span>{
-                bucket.lock().<span class="kw">await</span>.post_hook(<span class="kw-2">&amp;</span>response, <span class="kw-2">&amp;</span>req.route, <span class="kw-2">&amp;</span><span class="self">self</span>.ratelimit_callback).<span class="kw">await
+                bucket
+                    .lock()
+                    .<span class="kw">await
+                    </span>.post_hook(
+                        <span class="kw-2">&amp;</span>response,
+                        <span class="kw-2">&amp;</span>req.route,
+                        <span class="kw-2">&amp;</span><span class="self">self</span>.ratelimit_callback,
+                        <span class="self">self</span>.absolute_ratelimits,
+                    )
+                    .<span class="kw">await
             </span>};
 
             <span class="kw">if </span>!redo.unwrap_or(<span class="bool-val">true</span>) {
@@ -861,6 +894,7 @@
         response: <span class="kw-2">&amp;</span>Response,
         route: <span class="kw-2">&amp;</span>RouteInfo&lt;<span class="lifetime">&#39;_</span>&gt;,
         ratelimit_callback: <span class="kw-2">&amp;</span>(<span class="kw">dyn </span>Fn(RatelimitInfo) + Send + Sync),
+        absolute_ratelimits: bool,
     ) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
         <span class="kw">if let </span><span class="prelude-val">Some</span>(limit) = parse_header(response.headers(), <span class="string">&quot;x-ratelimit-limit&quot;</span>)<span class="question-mark">? </span>{
             <span class="self">self</span>.limit = limit;
@@ -870,16 +904,16 @@
             <span class="self">self</span>.remaining = remaining;
         }
 
-        <span class="attribute">#[cfg(feature = <span class="string">&quot;absolute_ratelimits&quot;</span>)]
-        </span><span class="kw">if let </span><span class="prelude-val">Some</span>(reset) = parse_header::&lt;f64&gt;(response.headers(), <span class="string">&quot;x-ratelimit-reset&quot;</span>)<span class="question-mark">? </span>{
-            <span class="self">self</span>.reset = <span class="prelude-val">Some</span>(std::time::UNIX_EPOCH + Duration::from_secs_f64(reset));
+        <span class="kw">if </span>absolute_ratelimits {
+            <span class="kw">if let </span><span class="prelude-val">Some</span>(reset) = parse_header::&lt;f64&gt;(response.headers(), <span class="string">&quot;x-ratelimit-reset&quot;</span>)<span class="question-mark">? </span>{
+                <span class="self">self</span>.reset = <span class="prelude-val">Some</span>(std::time::UNIX_EPOCH + Duration::from_secs_f64(reset));
+            }
         }
 
         <span class="kw">if let </span><span class="prelude-val">Some</span>(reset_after) =
             parse_header::&lt;f64&gt;(response.headers(), <span class="string">&quot;x-ratelimit-reset-after&quot;</span>)<span class="question-mark">?
         </span>{
-            <span class="attribute">#[cfg(not(feature = <span class="string">&quot;absolute_ratelimits&quot;</span>))]
-            </span>{
+            <span class="kw">if </span>!absolute_ratelimits {
                 <span class="self">self</span>.reset = <span class="prelude-val">Some</span>(SystemTime::now() + Duration::from_secs_f64(reset_after));
             }
 
@@ -1045,4 +1079,4 @@
     }
 }
 </code></pre></div>
-</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="serenity" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.66.0-nightly (1898c34e9 2022-10-26)" ></div></body></html>
+</section></div></main><div id="rustdoc-vars" data-root-path="../../../" data-current-crate="serenity" data-themes="ayu,dark,light" data-resource-suffix="" data-rustdoc-version="1.67.0-nightly (77e57db38 2022-10-30)" ></div></body></html>
