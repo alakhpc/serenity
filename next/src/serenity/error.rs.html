@@ -229,7 +229,7 @@
 /// type, rather than the usual 2 (`Result&lt;T, Error&gt;`). This is because all
 /// functions that return a result return serenity&#39;s [`Error`], so this is
 /// implied, and a &quot;simpler&quot; result is used.
-</span><span class="kw">pub type </span><span class="prelude-ty">Result</span>&lt;T&gt; = StdResult&lt;T, Error&gt;;
+</span><span class="kw">pub type </span><span class="prelude-ty">Result</span>&lt;T, E = Error&gt; = StdResult&lt;T, E&gt;;
 
 <span class="doccomment">/// A common error enum returned by most of the library&#39;s functionality within a
 /// custom [`Result`].

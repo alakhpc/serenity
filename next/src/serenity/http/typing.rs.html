@@ -166,7 +166,7 @@
     </span><span class="kw">pub fn </span>start(http: Arc&lt;Http&gt;, channel_id: ChannelId) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
         <span class="kw">let </span>(sx, <span class="kw-2">mut </span>rx) = oneshot::channel();
 
-        spawn_named(<span class="string">&quot;typing::start&quot;</span>, <span class="kw">async move </span>{
+        spawn_named::&lt;<span class="kw">_</span>, <span class="prelude-ty">Result</span>&lt;<span class="kw">_</span>&gt;&gt;(<span class="string">&quot;typing::start&quot;</span>, <span class="kw">async move </span>{
             <span class="kw">loop </span>{
                 <span class="kw">match </span>rx.try_recv() {
                     <span class="prelude-val">Ok</span>(<span class="kw">_</span>) | <span class="prelude-val">Err</span>(TryRecvError::Closed) =&gt; <span class="kw">break</span>,
